@@ -484,5 +484,50 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        // Mobile Hamburger Menu Fix
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuBtn = document.getElementById('menuBtn');
+            const nav = document.querySelector('nav');
+
+            if (menuBtn && nav) {
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = nav.style.display === 'flex';
+                    if (isOpen) {
+                        nav.style.display = 'none';
+                    } else {
+                        nav.style.display = 'flex';
+                        nav.style.flexDirection = 'column';
+                        nav.style.position = 'absolute';
+                        nav.style.top = '65px';
+                        nav.style.left = '0';
+                        nav.style.width = '100%';
+                        nav.style.background = '#ffffff';
+                        nav.style.padding = '20px 0';
+                        nav.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
+                        nav.style.zIndex = '99999';
+                        nav.style.alignItems = 'center';
+                        nav.style.gap = '15px';
+                    }
+                });
+
+                // Link click hote hi dashboard par scroll ho aur menu close ho
+                nav.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        nav.style.display = 'none';
+                        const targetId = link.getAttribute('href');
+                        if (targetId && targetId.startsWith('#')) {
+                            e.preventDefault();
+                            const target = document.querySelector(targetId);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
