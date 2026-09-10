@@ -497,3 +497,40 @@ document.addEventListener("DOMContentLoaded", () => {
     setupAuthModal();
     loadTrainData("12424");
 });
+// Mobile navigation smooth scroll & auto-close fix
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Page load hote hi train dashboard auto-render ho jaye
+    const trainInput = document.getElementById('trainInput');
+    const searchBtn = document.getElementById('searchBtn');
+    if (trainInput && searchBtn && !trainInput.value) {
+        trainInput.value = '12424';
+        if (typeof searchTrain === 'function') {
+            searchTrain('12424');
+        } else {
+            searchBtn.click();
+        }
+    }
+
+    // 2. Mobile 3-line menu ke sabhi links par auto-scroll aur auto-close
+    const navLinks = document.querySelectorAll('.nav-links a, .mobile-menu a, nav a');
+    const mobileMenu = document.querySelector('.nav-links') || document.querySelector('.mobile-menu');
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const targetId = link.getAttribute('href');
+            if (targetId && targetId.startsWith('#')) {
+                e.preventDefault();
+                const targetElem = document.querySelector(targetId) || document.getElementById('liveStatusSection') || document.getElementById('status-section');
+                
+                if (targetElem) {
+                    targetElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                // Menu band karein
+                if (mobileMenu) {
+                    mobileMenu.classList.remove('active', 'open', 'show');
+                }
+            }
+        });
+    });
+});
