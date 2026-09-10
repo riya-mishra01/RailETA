@@ -1,4 +1,4 @@
- const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 let selectedTrain = null;
 let trainMap = null;
@@ -121,13 +121,10 @@ const MOCK_DATA = {
 // SEARCH TRAIN
 // =========================
 async function searchTrain() {
-    const input = $("trainSearch");
+    const input = $("trainSearch") || $("trainInput");
     if (!input) return;
     const val = input.value.trim();
-    if (!val) {
-        alert("Please enter a train number or name.");
-        return;
-    }
+    if (!val) return;
 
     try {
         const res = await fetch(`${API_BASE}/trains`);
@@ -156,7 +153,7 @@ async function searchTrain() {
 }
 
 function scrollToSection(id) {
-    const el = $(id);
+    const el = $(id) || document.querySelector(`[id*="${id}"]`) || document.querySelector('section');
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -215,9 +212,6 @@ function updateNextStation(train, predictions) {
     if ($("expectedDelay")) $("expectedDelay").textContent = `+${delay} min`;
 }
 
-// ==========================================
-// 1. TIMELINE RENDERER (Clean & Detailed)
-// ==========================================
 function renderStationTimeline(predictions) {
     const container = $("stationTimeline");
     if (!container) return;
@@ -252,9 +246,6 @@ function renderStationTimeline(predictions) {
     `).join("");
 }
 
-// ==========================================
-// 2. ENHANCED JOURNEY CONDITIONS (NO SYNTAX ERROR)
-// ==========================================
 function updateConditions(train) {
     const cong = Number(train.downstream_congestion || 0.52);
     if ($("congestionValue")) {
@@ -278,45 +269,29 @@ function updateConditions(train) {
 
 function updateWhyEtaChanged(train) {
     const dly = Math.round(train.current_delay || 14);
-    if ($("reasonCongestion")) {
-        $("reasonCongestion").textContent = `Downstream density added ~${Math.round(dly * 0.6)} min buffer to subsequent sections.`;
-    }
-    if ($("reasonSpeed")) {
-        $("reasonSpeed").textContent = `Cruising at stable ${Math.round(train.current_speed || 68)} km/h across green signals.`;
-    }
-    if ($("reasonWeather")) {
-        $("reasonWeather").textContent = Number(train.weather_severity || 0) > 0 ? "Caution orders active due to visibility." : "Unrestricted line visibility detected by telemetry.";
-    }
-    if ($("reasonPrecedence")) {
-        $("reasonPrecedence").textContent = "Clear track block with loop priority reserved at next junction.";
-    }
+    if ($("reasonCongestion")) $("reasonCongestion").textContent = `Downstream density added ~${Math.round(dly * 0.6)} min buffer to subsequent sections.`;
+    if ($("reasonSpeed")) $("reasonSpeed").textContent = `Cruising at stable ${Math.round(train.current_speed || 68)} km/h across green signals.`;
+    if ($("reasonWeather")) $("reasonWeather").textContent = Number(train.weather_severity || 0) > 0 ? "Caution orders active due to visibility." : "Unrestricted line visibility detected by telemetry.";
+    if ($("reasonPrecedence")) $("reasonPrecedence").textContent = "Clear track block with loop priority reserved at next junction.";
 }
 
 function updateAlerts(train) {
     const container = $("alertsContainer");
     if (!container) return;
-
     const dly = Math.round(train.current_delay || 14);
     container.innerHTML = `
-        <div style="display:flex; gap:14px; align-items:center; padding:15px 20px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe;">
+        <div style="display:flex; gap:14px; align-items:center; padding:15px 20px; border-radius:12px; background:#eff6ff; border:1px solid #bfdbfe; margin-bottom:10px;">
             <span style="font-size:22px;">⚡</span>
             <div>
                 <strong style="color:#1d4ed8; font-size:15px;">Dynamic ETA Recalculation Active</strong>
                 <p style="margin:3px 0 0; color:#334155; font-size:13px;">Train running +${dly} min behind schedule. Dynamic ML model adjusted future arrival times based on speed recovery margins.</p>
             </div>
         </div>
-        <div style="display:flex; gap:14px; align-items:center; padding:15px 20px; border-radius:12px; background:#f0fdf4; border:1px solid #bbf7d0;">
+        <div style="display:flex; gap:14px; align-items:center; padding:15px 20px; border-radius:12px; background:#f0fdf4; border:1px solid #bbf7d0; margin-bottom:10px;">
             <span style="font-size:22px;">🟢</span>
             <div>
                 <strong style="color:#15803d; font-size:15px;">Mainline Signal Precedence Confirmed</strong>
                 <p style="margin:3px 0 0; color:#334155; font-size:13px;">Corridor Controller has assigned non-stop mainline routing past loop points.</p>
-            </div>
-        </div>
-        <div style="display:flex; gap:14px; align-items:center; padding:15px 20px; border-radius:12px; background:#fffbeb; border:1px solid #fde68a;">
-            <span style="font-size:22px;">🚉</span>
-            <div>
-                <strong style="color:#b45309; font-size:15px;">Platform Assignment Ready</strong>
-                <p style="margin:3px 0 0; color:#334155; font-size:13px;">Berthing scheduled on Platform 1 at next stop. Automatic announcement active.</p>
             </div>
         </div>
     `;
@@ -325,11 +300,9 @@ function updateAlerts(train) {
 function renderHistory(history, trainNo) {
     const body = $("historyBody");
     if (!body) return;
-
     if (!history || !history.length) {
         history = MOCK_DATA[trainNo]?.history || MOCK_DATA["12424"].history;
     }
-
     body.innerHTML = history.map(row => `
         <tr>
             <td>${escapeHtml(row.journey_date || "2026-03-28")}</td>
@@ -341,9 +314,6 @@ function renderHistory(history, trainNo) {
     `).join("");
 }
 
-// =========================
-// ROUTE MAP (LEAFLET)
-// =========================
 function updateRouteMap(train) {
     if (typeof L === "undefined") return;
     const mapEl = $("trainMap");
@@ -376,9 +346,6 @@ function updateRouteMap(train) {
     setTimeout(() => { if (trainMap) trainMap.invalidateSize(); }, 350);
 }
 
-// ==========================================
-// 3. STRICT AUTHENTICATION VALIDATION
-// ==========================================
 function setupAuthModal() {
     const modal = $("loginModal");
     const openBtn = $("loginNavBtn");
@@ -392,39 +359,18 @@ function setupAuthModal() {
         submitBtn.addEventListener("click", () => {
             const idVal = $("authId")?.value.trim();
             const passVal = $("authPass")?.value.trim();
-
-            const isPhone = /^[6-9]\d{9}$/.test(idVal);
-            const isUsername = /^[a-zA-Z0-9_]{4,15}$/.test(idVal);
-
-            if (!idVal) {
-                alert("⚠️ Error: Please enter your User ID or 10-digit Mobile Number.");
-                $("authId").focus();
+            if (!idVal || !passVal) {
+                alert("Please enter both ID and password.");
                 return;
             }
-
-            if (!isPhone && !isUsername) {
-                alert("⚠️ Invalid ID: Enter a valid 10-digit Indian mobile number or valid username (minimum 4 characters, letters/numbers only).");
-                $("authId").focus();
-                return;
-            }
-
-            if (!passVal || passVal.length < 4) {
-                alert("⚠️ Invalid Password: Minimum 4 characters or OTP required.");
-                $("authPass").focus();
-                return;
-            }
-
             openBtn.innerText = `👤 ${idVal.slice(0, 10)}`;
             openBtn.style.background = "#15803d";
             modal.style.display = "none";
-            alert(`✓ Verified! Welcome, ${idVal}. Live telemetry alerts linked.`);
+            alert(`Verified! Welcome, ${idVal}.`);
         });
     }
 }
 
-// =========================
-// REVIEWS
-// =========================
 function setupReviews() {
     const starButtons = document.querySelectorAll("#ratingInput button");
     starButtons.forEach(btn => {
@@ -453,14 +399,15 @@ function setupReviews() {
     }
 }
 
-// =========================
-// NAVIGATION & AUTO LOAD
-// =========================
-function setupNavigation() {
+// ====================================================
+// ROBUST MOBILE MENU & AUTO-LOAD SYSTEM
+// ====================================================
+function setupNavigationAndMobile() {
+    // 1. Search buttons
     const sBtn = $("searchBtn");
     if (sBtn) sBtn.addEventListener("click", searchTrain);
 
-    const sIn = $("trainSearch");
+    const sIn = $("trainSearch") || $("trainInput");
     if (sIn) {
         sIn.addEventListener("keydown", (e) => {
             if (e.key === "Enter") searchTrain();
@@ -476,61 +423,59 @@ function setupNavigation() {
         });
     });
 
-    const ref = $("refreshHistory");
-    if (ref) {
-        ref.addEventListener("click", () => {
-            renderHistory(selectedTrain ? selectedTrain.history : [], selectedTrain ? selectedTrain.train_no : "12424");
-            alert("History updated from records.");
+    // 2. Mobile Hamburger Toggle Handler
+    const hamburger = document.querySelector('.menu-toggle, .hamburger, [aria-label="Menu"]') || 
+                      document.querySelector('header svg')?.parentElement || 
+                      document.querySelector('header button');
+    
+    const navLinks = document.querySelector('.nav-links, nav ul, .nav-menu');
+
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = navLinks.classList.contains('active') || navLinks.style.display === 'flex';
+            if (isOpen) {
+                navLinks.classList.remove('active');
+                navLinks.style.display = 'none';
+            } else {
+                navLinks.classList.add('active');
+                navLinks.style.display = 'flex';
+                navLinks.style.flexDirection = 'column';
+                navLinks.style.position = 'absolute';
+                navLinks.style.top = '60px';
+                navLinks.style.left = '0';
+                navLinks.style.width = '100%';
+                navLinks.style.background = '#ffffff';
+                navLinks.style.padding = '15px';
+                navLinks.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
+                navLinks.style.zIndex = '99999';
+            }
         });
     }
 
-    document.querySelectorAll('nav a[href="#route"]').forEach(a => {
-        a.addEventListener("click", () => {
-            setTimeout(() => { if (trainMap) trainMap.invalidateSize(); }, 300);
+    // 3. Close mobile menu & scroll when clicking ANY nav link
+    document.querySelectorAll('nav a, .nav-links a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const targetId = link.getAttribute('href');
+            if (navLinks) {
+                navLinks.classList.remove('active');
+                navLinks.style.display = 'none';
+            }
+            if (targetId && targetId.startsWith('#')) {
+                e.preventDefault();
+                const sectionId = targetId.replace('#', '');
+                scrollToSection(sectionId);
+            }
         });
     });
 }
 
+// Auto-run everything on load
 document.addEventListener("DOMContentLoaded", () => {
-    setupNavigation();
+    setupNavigationAndMobile();
     setupReviews();
     setupAuthModal();
+    
+    // Auto-load Train Dashboard instantly
     loadTrainData("12424");
-});
-// Mobile navigation smooth scroll & auto-close fix
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Page load hote hi train dashboard auto-render ho jaye
-    const trainInput = document.getElementById('trainInput');
-    const searchBtn = document.getElementById('searchBtn');
-    if (trainInput && searchBtn && !trainInput.value) {
-        trainInput.value = '12424';
-        if (typeof searchTrain === 'function') {
-            searchTrain('12424');
-        } else {
-            searchBtn.click();
-        }
-    }
-
-    // 2. Mobile 3-line menu ke sabhi links par auto-scroll aur auto-close
-    const navLinks = document.querySelectorAll('.nav-links a, .mobile-menu a, nav a');
-    const mobileMenu = document.querySelector('.nav-links') || document.querySelector('.mobile-menu');
-
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            const targetId = link.getAttribute('href');
-            if (targetId && targetId.startsWith('#')) {
-                e.preventDefault();
-                const targetElem = document.querySelector(targetId) || document.getElementById('liveStatusSection') || document.getElementById('status-section');
-                
-                if (targetElem) {
-                    targetElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                // Menu band karein
-                if (mobileMenu) {
-                    mobileMenu.classList.remove('active', 'open', 'show');
-                }
-            }
-        });
-    });
 });
