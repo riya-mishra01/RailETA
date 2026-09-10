@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailETA | Dynamic Train ETA Platform</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* Enhanced Timeline & Dashboard Scaffolding */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid #2563eb;
+            padding: 16px 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease;
+        }
+
+        .timeline-item:hover {
+            transform: translateX(4px);
+        }
+
+        .station-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .station-index {
+            background: #eff6ff;
+            color: #2563eb;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .badge-pill {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-green { background: #dcfce7; color: #15803d; }
+        .badge-amber { background: #fef3c7; color: #b45309; }
+
+        /* Login Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-card input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .auth-nav-btn {
+            background: #2563eb;
+            color: white !important;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+
+        #trainMap {
+            height: 460px;
+            width: 100%;
+            border-radius: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+    <header class="navbar">
+        <div class="logo">
+            <div class="logo-icon">🚆</div>
+            <div>
+                <h1>RailETA</h1>
+                <span>Dynamic Train ETA</span>
+            </div>
+        </div>
+
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#status">Live Status</a>
+            <a href="#insights">Insights</a>
+            <a href="#conditions">Conditions</a>
+            <a href="#timeline">Stations</a>
+            <a href="#alerts">Alerts</a>
+            <a href="#route">Route</a>
+            <a href="#history">History</a>
+            <a href="#reviews">Reviews</a>
+            <button class="auth-nav-btn" id="loginNavBtn">Login</button>
+        </nav>
+
+        <button class="menu-btn" id="menuBtn">☰</button>
+    </header>
+
+    <!-- ================= LOGIN MODAL ================= -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-card">
+            <h3 style="margin-top:0; font-size:20px;">Passenger Portal</h3>
+            <p style="font-size:13px; color:#64748b;">Login to track live journey alarms and save favorite routes.</p>
+            
+            <label style="font-size:13px; font-weight:600;">IRCTC User ID / Mobile</label>
+            <input type="text" id="authId" placeholder="e.g. 9876543210">
+
+            <label style="font-size:13px; font-weight:600;">Password / OTP</label>
+            <input type="password" id="authPass" placeholder="••••••••">
+
+            <button id="authSubmitBtn" class="primary-btn" style="width:100%; padding:12px;">Sign In</button>
+            <button id="modalCloseBtn" style="width:100%; margin-top:8px; background:transparent; border:none; color:#64748b; cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+
+    <main>
+
+        <!-- ================= 1. HOME ================= -->
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <span class="badge">● LIVE TELEMETRY ENGINE</span>
+                <h2>
+                    Know where your train is.
+                    <br>
+                    <span>Know when it will arrive.</span>
+                </h2>
+                <p>
+                    Continuously recalculated station ETAs using track headway, speed profiles,
+                    congestion curves, and ML delay forecasting.
+                </p>
+
+                <div class="search-box">
+                    <input type="text" id="trainSearch" placeholder="Enter Train Number or Train Name">
+                    <button id="searchBtn">Search Train</button>
+                </div>
+
+                <div class="quick-search">
+                    <span>Try:</span>
+                    <button class="quick-train" data-train="12424">12424 Rajdhani Express</button>
+                    <button class="quick-train" data-train="22436">22436 Vande Bharat</button>
+                    <button class="quick-train" data-train="12382">12382 Poorva Express</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 2. LIVE STATUS ================= -->
+        <section id="status" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">LIVE STATUS</span>
+                    <h2>Train Journey Status</h2>
+                </div>
+                <span class="live-indicator"><span></span> Active Tracking</span>
+            </div>
+
+            <div class="train-card">
+                <div class="train-main-info">
+                    <div class="train-number">
+                        <span id="trainNumber">12424</span>
+                        <span class="status-pill" id="trainStatus">On Route</span>
+                    </div>
+                    <h3 id="trainName">Rajdhani Express</h3>
+
+                    <div class="route-summary">
+                        <div class="station">
+                            <strong id="sourceStation">New Delhi (NDLS)</strong>
+                            <span>Source</span>
+                        </div>
+                        <div class="route-line">
+                            <div class="route-dot"></div>
+                            <div class="route-track"></div>
+                            <span>🚆</span>
+                            <div class="route-track"></div>
+                            <div class="route-dot"></div>
+                        </div>
+                        <div class="station destination">
+                            <strong id="destinationStation">Dibrugarh (DBRG)</strong>
+                            <span>Destination</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-stats">
+                    <div class="stat">
+                        <span>📍 Current Location</span>
+                        <strong id="currentLocation">Between Aligarh & Kanpur</strong>
+                    </div>
+                    <div class="stat">
+                        <span>⚡ Current Speed</span>
+                        <strong><span id="currentSpeed">68</span> km/h</strong>
+                    </div>
+                    <div class="stat">
+                        <span>⏱️ Current Delay</span>
+                        <strong id="currentDelay">+14 min</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Station Card -->
+            <div class="next-station-section" style="margin-top: 20px;">
+                <div class="next-station-card">
+                    <div class="next-station-left">
+                        <span class="section-label">NEXT UPCOMING JUNCTION</span>
+                        <h2 id="nextStation">Kanpur Central (CNB)</h2>
+                        <p>Expected Arrival</p>
+                        <strong class="big-time" id="nextStationETA">19:42</strong>
+                    </div>
+                    <div class="next-station-right">
+                        <div class="confidence">
+                            <span>ETA Confidence</span>
+                            <strong><span id="confidenceValue">94</span>%</strong>
+                            <div class="confidence-bar">
+                                <div id="confidenceBar" style="width: 94%;"></div>
+                            </div>
+                        </div>
+                        <div class="delay-box">
+                            <span>Expected Delay</span>
+                            <strong id="expectedDelay">+14 min</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 3. INSIGHTS ================= -->
+        <section id="insights" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">AI EXPLAINABILITY</span>
+                    <h2>Why did your ETA change?</h2>
+                </div>
+            </div>
+
+            <div class="reason-grid">
+                <div class="reason-card">
+                    <div class="reason-icon">🚦</div>
+                    <div>
+                        <h3>Route Congestion</h3>
+                        <p id="reasonCongestion">Section block ALD-CNB operating at moderate density.</p>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-icon">⚡</div>
+                    <div>
+                        <h3>Speed Profile</h3>
+                        <p id="reasonSpeed">Running steady along standard 68 km/h line curve.</p>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-icon">🌧️</div>
+                    <div>
+                        <h3>Operational Visibility</h3>
+                        <p id="reasonWeather">Visibility clear across operational mainline track.</p>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-icon">🚆</div>
+                    <div>
+                        <h3>Precedence Clearance</h3>
+                        <p id="reasonPrecedence">Priority mainline corridor assigned without loop detention.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 4. CONDITIONS ================= -->
+        <section id="conditions" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">LIVE SENSORS</span>
+                    <h2>Journey Conditions</h2>
+                </div>
+            </div>
+
+            <div class="condition-grid">
+                <div class="condition-card">
+                    <span class="condition-icon">🚦</span>
+                    <div>
+                        <span>Track Congestion</span>
+                        <strong id="congestionValue">Moderate (0.52)</strong>
+                    </div>
+                </div>
+                <div class="condition-card">
+                    <span class="condition-icon">🛤️</span>
+                    <div>
+                        <span>Speed Restriction</span>
+                        <strong id="speedRestriction">None (Mainline Clear)</strong>
+                    </div>
+                </div>
+                <div class="condition-card">
+                    <span class="condition-icon">🌦️</span>
+                    <div>
+                        <span>Weather</span>
+                        <strong id="weatherCondition">Clear & Fair</strong>
+                    </div>
+                </div>
+                <div class="condition-card">
+                    <span class="condition-icon">🚆</span>
+                    <div>
+                        <span>Track Headway</span>
+                        <strong><span id="headwayValue">7.2</span> km</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 5. STATIONS TIMELINE ================= -->
+        <section id="timeline" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">SCHEDULED HALTS</span>
+                    <h2>Upcoming Stations Timeline</h2>
+                </div>
+            </div>
+
+            <div id="stationTimeline" class="timeline-container">
+                <!-- Javascript will inject list here -->
+            </div>
+        </section>
+
+        <!-- ================= 6. IMPORTANT ALERTS ================= -->
+        <section id="alerts" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">LIVE BULLETINS</span>
+                    <h2>Important Travel Updates</h2>
+                </div>
+            </div>
+
+            <div id="alertsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Multiple cards injected here -->
+            </div>
+        </section>
+
+        <!-- ================= 7. ROUTE ================= -->
+        <section id="route" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">ROUTE OVERVIEW</span>
+                    <h2>Where is the train?</h2>
+                </div>
+                <span class="map-status">● Live Coordinate Stream</span>
+            </div>
+
+            <div class="map-container">
+                <div id="trainMap"></div>
+            </div>
+        </section>
+
+        <!-- ================= 8. HISTORY ================= -->
+        <section id="history" class="section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">RECORDED LOGS</span>
+                    <h2>Journey History</h2>
+                </div>
+                <button id="refreshHistory" class="small-btn">Refresh Records</button>
+            </div>
+
+            <div class="history-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Train No</th>
+                            <th>Corridor Section</th>
+                            <th>Recorded Delay</th>
+                            <th>Primary Cause</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= 9. REVIEWS ================= -->
+        <section id="reviews" class="section reviews-section">
+            <div class="section-heading">
+                <div>
+                    <span class="section-label">PASSENGER VOICES</span>
+                    <h2>What Passengers Say</h2>
+                </div>
+            </div>
+
+            <div class="review-grid">
+                <div class="review-card">
+                    <div class="review-top">
+                        <div class="avatar">A</div>
+                        <div><strong>Passenger</strong><span>Delhi → Varanasi</span></div>
+                    </div>
+                    <div class="stars">★★★★★</div>
+                    <p>“The dynamic station-wise ETA matched the exact station entry. Very reliable!”</p>
+                </div>
+                <div class="review-card">
+                    <div class="review-top">
+                        <div class="avatar">S</div>
+                        <div><strong>Passenger</strong><span>Prayagraj → Varanasi</span></div>
+                    </div>
+                    <div class="stars">★★★★★</div>
+                    <p>“Loved that the headway and delay updates re-adjusted automatically.”</p>
+                </div>
+            </div>
+
+            <div class="review-form">
+                <h3>Share your experience</h3>
+                <div class="rating-input" id="ratingInput">
+                    <button type="button" data-rating="1">★</button>
+                    <button type="button" data-rating="2">★</button>
+                    <button type="button" data-rating="3">★</button>
+                    <button type="button" data-rating="4">★</button>
+                    <button type="button" data-rating="5">★</button>
+                </div>
+                <textarea id="reviewText" placeholder="Write your feedback for RailETA..."></textarea>
+                <button id="submitReview" class="primary-btn">Submit Review</button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-main">
+            <div class="footer-brand">
+                <div class="logo">
+                    <div class="logo-icon">🚆</div>
+                    <div>
+                        <h2>RailETA</h2>
+                        <span>Dynamic ETA Platform</span>
+                    </div>
+                </div>
+                <p>AI-driven railway telemetry forecasting for Indian Railways.</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 RailETA Platform</span>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
