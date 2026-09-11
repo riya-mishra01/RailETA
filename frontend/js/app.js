@@ -152,9 +152,17 @@ async function searchTrain() {
     scrollToSection("status");
 }
 
+// function scrollToSection(id) {
+//     const el = $(id) || document.querySelector(`[id*="${id}"]`) || document.querySelector('section');
+//     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+// }
+
 function scrollToSection(id) {
-    const el = $(id) || document.querySelector(`[id*="${id}"]`) || document.querySelector('section');
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const cleanId = String(id).replace('#', '');
+    const el = document.getElementById(cleanId) || document.querySelector(`[id="${cleanId}"]`);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
 }
 
 // =========================

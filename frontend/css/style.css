@@ -1214,3 +1214,24 @@ footer {
         gap: 7px;
     }
 }
+/* Desktop view fix: Saare sections permanently visible rahenge */
+section,
+.section,
+#status,
+#insights,
+#conditions,
+#timeline,
+#alerts,
+#route,
+#history,
+#reviews {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+}
+
+#trainMap {
+    height: 460px !important;
+    width: 100% !important;
+}
