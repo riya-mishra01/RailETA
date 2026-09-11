@@ -485,19 +485,17 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/app.js"></script>
     <script>
-        // Mobile Hamburger Menu Fix
         document.addEventListener('DOMContentLoaded', () => {
             const menuBtn = document.getElementById('menuBtn');
             const nav = document.querySelector('nav');
 
+            // 1. Mobile Hamburger Toggle (Sirf mobile screen ke liye)
             if (menuBtn && nav) {
                 menuBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const isOpen = nav.style.display === 'flex';
-                    if (isOpen) {
-                        nav.style.display = 'none';
-                    } else {
-                        nav.style.display = 'flex';
+                    const isShown = nav.classList.toggle('mobile-open');
+                    nav.style.display = isShown ? 'flex' : 'none';
+                    if (isShown) {
                         nav.style.flexDirection = 'column';
                         nav.style.position = 'absolute';
                         nav.style.top = '65px';
@@ -512,10 +510,15 @@
                     }
                 });
 
-                // Link click hote hi dashboard par scroll ho aur menu close ho
+                // 2. Nav links par click handling (Laptop par nav kabhi gayab nahi hoga!)
                 nav.querySelectorAll('a').forEach(link => {
                     link.addEventListener('click', (e) => {
-                        nav.style.display = 'none';
+                        // Sirf mobile view me menu band karein, laptop par bilkul nahi!
+                        if (window.innerWidth <= 768) {
+                            nav.style.display = 'none';
+                            nav.classList.remove('mobile-open');
+                        }
+
                         const targetId = link.getAttribute('href');
                         if (targetId && targetId.startsWith('#')) {
                             e.preventDefault();
